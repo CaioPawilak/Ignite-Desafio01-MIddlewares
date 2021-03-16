@@ -1,6 +1,6 @@
 const express = require('express');
 const cors = require('cors');
-
+const { UUIDv4 } = require('uuid-v4-validator'); 
 const { v4: uuidv4, validate } = require('uuid');
 
 const app = express();
@@ -10,19 +10,64 @@ app.use(cors());
 const users = [];
 
 function checksExistsUserAccount(request, response, next) {
-  // Complete aqui
+  const {username} = request.headers;
+  const usernameAlreadyExists = users.find((user) => user.username === username);
+
+  if(!usernameAlreadyExists){
+    return response.status(404).json({error:"User doesn't exists"})
+  }
+
+  request.user = usernameAlreadyExists;
+
+  return next()
+  
 }
 
 function checksCreateTodosUserAvailability(request, response, next) {
-  // Complete aqui
+  const { user } = request;
+
+  const todoLenght = user.todos.length
+
+  if(todoLenght >= 10 && user.pro === false){
+    return response.status(403).json({message:"Você não pode incluir mais todos."})
+  
+  }
+
+  return next()
 }
 
 function checksTodoExists(request, response, next) {
-  // Complete aqui
+  const {username} = request.headers;
+  const { id } = request.params;
+  const findUser = users.find((uName) => uName.username === username);
+  if(!UUIDv4.validate(id)){
+    return response.status(400).json({error:"Id inválido"})
+  }
+  if(!findUser ){
+    return response.status(404).json({error:"Usuário não localizado"})
+  }
+  const isValidTodo = findUser.todos.find((todo) => todo.id === id);
+  
+  if(!isValidTodo){
+    return response.status(404).json({error:"Todo não localizada."})
+  }
+  
+    request.user = findUser
+    request.todo = isValidTodo
+
+  return next()
 }
 
 function findUserById(request, response, next) {
-  // Complete aqui
+  const { id } = request.params;
+  const findIdUser = users.find((user) => user.id === id);
+
+  if(!findIdUser){
+    return response.status(404).json({error:"User doesn't exists"})
+  }
+
+  request.user = findIdUser
+  return next()
 }
 
 app.post('/users', (request, response) => {
@@ -41,9 +86,9 @@ app.post('/users', (request, response) => {
     pro: false,
     todos: []
   };
-
+  console.log()
   users.push(user);
-
+ 
   return response.status(201).json(user);
 });
 
